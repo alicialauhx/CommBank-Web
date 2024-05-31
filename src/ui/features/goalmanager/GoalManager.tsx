@@ -12,6 +12,30 @@ import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import DatePicker from '../../components/DatePicker'
 import { Theme } from '../../components/Theme'
 
+import { BaseEmoji, Picker} from 'emoji-mart'
+import 'emoji-mart/css/emoji-mart.css'
+import { selectMode } from '../../../store/themeSlice'
+
+import GoalIcon from './GoalIcon'
+import { TransparentButton } from '../../components/TransparentButton'
+import { faSmile } from '@fortawesome/free-solid-svg-icons'
+
+type emojiProps = { onClick: (emoji: BaseEmoji, event: React.MouseEvent) => void }
+
+export default function EmojiPicker(emojiprops: emojiProps) {
+  const theme = useAppSelector(selectMode)
+
+  return (
+    <Picker
+      theme={theme}
+      showPreview={false}
+      showSkinTones={false}
+      onClick={emojiprops.onClick}
+      color="primary"
+    />
+  )
+}
+
 type Props = { goal: Goal }
 export function GoalManager(props: Props) {
   const dispatch = useAppDispatch()
@@ -21,6 +45,39 @@ export function GoalManager(props: Props) {
   const [name, setName] = useState<string | null>(null)
   const [targetDate, setTargetDate] = useState<Date | null>(null)
   const [targetAmount, setTargetAmount] = useState<number | null>(null)
+
+  const [icon, setIcon] = useState<string | null>(null)
+
+  useEffect(() => {
+    setIcon(props.goal.icon)
+  }, [props.goal.id, props.goal.icon])
+
+  const [EmojiPickerIsOpen, setEmojiPickerIsOpen] = useState(false)
+
+  const hasIcon = () => icon != null
+
+  const pickEmojiOnClick = (emoji: BaseEmoji, event: React.MouseEvent<Element, MouseEvent>) => {
+    event.stopPropagation()
+
+    setIcon(emoji.native)
+    setEmojiPickerIsOpen(false)
+
+    const updatedGoal: Goal = {
+      ...props.goal,
+      icon: emoji.native ?? props.goal.icon,
+      name: name ?? props.goal.name,
+      targetDate: targetDate ?? props.goal.targetDate,
+      targetAmount: targetAmount ?? props.goal.targetAmount,
+    }
+
+    updateGoalApi(props.goal.id, updatedGoal)
+    // dispatch(updateGoalRedux(updatedGoal))
+  }
+
+  const addIconOnClick = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    setEmojiPickerIsOpen(true)
+  }
 
   useEffect(() => {
     setName(props.goal.name)
@@ -86,6 +143,27 @@ export function GoalManager(props: Props) {
         </Value>
       </Group>
 
+      // added emoji picker container here
+      <EmojiPickerContainer
+        isOpen={EmojiPickerIsOpen}
+        hasIcon={hasIcon()}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <EmojiPicker onClick={pickEmojiOnClick} />
+      </EmojiPickerContainer>
+    
+      // added iconbutton container
+      <AddIconButtonContainer shouldShow={hasIcon()}>
+        <TransparentButton onClick={addIconOnClick}>
+          <FontAwesomeIcon icon={faSmile} size="2x" />
+          {/* <Text>sAdd icon</Text> */}
+        </TransparentButton>
+      </AddIconButtonContainer>
+
+      <GoalIconContainer shouldShow={hasIcon()}>
+        <GoalIcon icon={goal.icon} onClick={addIconOnClick} />
+      </GoalIconContainer>
+
       <Group>
         <Field name="Target Amount" icon={faDollarSign} />
         <Value>
@@ -115,6 +193,25 @@ type AddIconButtonContainerProps = { shouldShow: boolean }
 type GoalIconContainerProps = { shouldShow: boolean }
 type EmojiPickerContainerProps = { isOpen: boolean; hasIcon: boolean }
 
+const EmojiPickerContainer = styled.div<EmojiPickerContainerProps>`
+  display: ${(props) => (props.isOpen ? 'flex' : 'none')};
+  position: absolute;
+  top: ${(props) => (props.hasIcon ? '10rem' : '2rem')};
+  left: 0;
+`
+const AddIconButtonContainer = styled.div<AddIconButtonContainerProps>`
+  display: ${(props) => (props.shouldShow ? 'flex' : 'none')};
+`
+
+const GoalIconContainer = styled.div<GoalIconContainerProps>`
+  display: ${(props) => (props.shouldShow ? 'flex' : 'none')};
+`
+// const AddIconButtonContainer = styled.div<AddIconButtonContainerProps>`
+//   display: ${(props) => (props.isOpen ? 'flex' : 'none')};
+//   position: absolute;
+//   top: ${(props) => (props.hasIcon ? '10rem' : '2rem')};
+//   left: 0;
+// `
 const Field = (props: FieldProps) => (
   <FieldContainer>
     <FontAwesomeIcon icon={props.icon} size="2x" />
